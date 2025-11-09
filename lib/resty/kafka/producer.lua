@@ -27,6 +27,7 @@ local pairs = pairs
 local API_VERSION_V0 = 0
 local API_VERSION_V1 = 1
 local API_VERSION_V2 = 2
+local API_VERSION_V3 = 3
 
 local ok, new_tab = pcall(require, "table.new")
 if not ok then
@@ -64,6 +65,9 @@ local function produce_encode(self, topic_partitions)
     local req = request:new(request.ProduceRequest,
                             correlation_id(self), self.client.client_id, self.api_version)
 
+    if self.api_version == API_VERSION_V3 then
+        req:string() -- transactional_id(NULL)
+    end
     req:int16(self.required_acks)
     req:int32(self.request_timeout)
     req:int32(topic_partitions.topic_num)
@@ -105,7 +109,7 @@ local function produce_decode(resp)
                     offset = resp:int64(),
                 }
 
-            elseif api_version == API_VERSION_V2 then
+            elseif api_version == API_VERSION_V2 or api_version == API_VERSION_V3 then
                 ret[topic][partition] = {
                     errcode = resp:int16(),
                     offset = resp:int64(),
